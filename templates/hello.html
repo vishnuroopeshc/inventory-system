@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Stock</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .card {
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Notification Area -->
+    <div id="notificationArea" class="notification"></div>
+
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="sidebar bg-white w-64 px-4 py-8 shadow-lg">
+            <div class="flex items-center space-x-3 px-4 mb-10">
+                <i class="fas fa-warehouse text-blue-500 text-2xl"></i>
+                <h1 class="text-xl font-bold text-gray-800">Inventory System</h1>
+            </div>
+            <nav>
+                <a href="/dashboard" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 mb-2 text-gray-700">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/hello.html" class="flex items-center space-x-3 px-4 py-3 rounded-lg bg-blue-50 mb-2 text-blue-600">
+                    <i class="fas fa-edit"></i>
+                    <span>Update Stock</span>
+                </a>
+                <a href="/inventory_1" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 mb-2 text-gray-700">
+                    <i class="fas fa-boxes"></i>
+                    <span>Inventory</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-y-auto p-8">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-800">Update Stock Levels</h2>
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-600">Welcome, <strong>{{ username }}</strong></span>
+                    <a href="/logout" class="text-blue-500 hover:text-blue-700">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-6">
+                <!-- Location Selection and Stock Update Form -->
+                <div class="card bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-lg font-semibold mb-4">Location Selection</h3>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="location_select">
+                            Select Location
+                        </label>
+                        <select id="location_select" class="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            {% for location in locations %}
+                            <option value="{{ location }}" {% if location == current_location %}selected{% endif %}>{{ location }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <h3 class="text-lg font-semibold mb-4">Update Stock</h3>
+                    <form id="stockUpdateForm">
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="product_type">
+                                Product Type
+                            </label>
+                            <select id="product_type" name="product_type" class="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                <option value="">Select Product Type</option>
+                                {% for product_type in product_types %}
+                                <option value="{{ product_type }}">{{ product_type }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="location">
+                                Location
+                            </label>
+                            <input type="text" id="location" name="location" value="{{ current_location }}" class="w-full border border-gray-300 rounded-md px-4 py-2 bg-gray-100" readonly>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="stock_change">
+                                Quantity
+                            </label>
+                            <input type="number" id="stock_change" name="stock_change" min="1" value="1" class="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        <div class="flex space-x-4">
+                            <button type="button" id="addStockBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md flex items-center">
+                                <i class="fas fa-plus mr-2"></i> Add Stock
+                            </button>
+                            <button type="button" id="removeStockBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md flex items-center">
+                                <i class="fas fa-minus mr-2"></i> Remove Stock
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Current Stock Chart -->
+                <div class="card bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-lg font-semibold mb-4">Current Stock Levels - <span id="chartLocation">{{ current_location }}</span></h3>
+                    <div class="chart-container">
+                        <canvas id="stockChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stockChart = null;
+        let currentLocation = '{{ current_location }}';
+        
+        // Notification function
+        function showNotification(message, type = 'success') {
+            const notificationArea = document.getElementById('notificationArea');
+            const notification = document.createElement('div');
+            notification.className = `px-4 py-3 rounded shadow-lg mb-3 ${type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`;
+            notification.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span>${message}</span>
+                    <button class="text-lg" onclick="this.parentElement.parentElement.remove()">&times;</button>
+                </div>
+            `;
+            notificationArea.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const locationSelect = document.getElementById('location_select');
+            const stockForm = document.getElementById('stockUpdateForm');
+            const addStockBtn = document.getElementById('addStockBtn');
+            const removeStockBtn = document.getElementById('removeStockBtn');
+            const locationField = document.getElementById('location');
+            const chartLocationSpan = document.getElementById('chartLocation');
+            
+            // Initialize chart with data from Flask
+            const chartData = JSON.parse('{{ chart_data | tojson | safe }}');
+            initializeChart(chartData.labels, chartData.values);
+            
+            // Location selection change handler
+            locationSelect.addEventListener('change', function() {
+                const newLocation = this.value;
+                currentLocation = newLocation;
+                locationField.value = newLocation;
+                chartLocationSpan.textContent = newLocation;
+                
+                // Fetch product types for the selected location
+                fetch(`/get_products_for_location/${newLocation}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const productTypeSelect = document.getElementById('product_type');
+                            productTypeSelect.innerHTML = '<option value="">Select Product Type</option>';
+                            
+                            data.product_types.forEach(productType => {
+                                const option = document.createElement('option');
+                                option.value = productType;
+                                option.textContent = productType;
+                                productTypeSelect.appendChild(option);
+                            });
+                            
+                            // Fetch and update chart data
+                            fetchLocationData(newLocation);
+                        } else {
+                            showNotification('Failed to load products for this location', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        showNotification('Error loading product data', 'error');
+                    });
+            });
+            
+            // Add stock button click
+            addStockBtn.addEventListener('click', function() {
+                updateStock('add');
+            });
+            
+            // Remove stock button click
+            removeStockBtn.addEventListener('click', function() {
+                updateStock('subtract');
+            });
+            
+            function updateStock(operation) {
+                if (!stockForm.checkValidity()) {
+                    showNotification('Please fill all required fields', 'error');
+                    return;
+                }
+                
+                const formData = {
+                    location: document.getElementById('location').value,
+                    product_type: document.getElementById('product_type').value,
+                    stock_change: document.getElementById('stock_change').value,
+                    operation: operation
+                };
+                
+                fetch('/update_stock_mysql', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(data.message);
+                        fetchLocationData(currentLocation); // Refresh chart data
+                        stockForm.reset(); // Reset form
+                        document.getElementById('location').value = currentLocation;
+                        document.getElementById('stock_change').value = 1;
+                    } else {
+                        showNotification(data.error || 'Failed to update stock', 'error');
+                    }
+                })
+                .catch(error => {
+                    showNotification('An error occurred while updating stock', 'error');
+                });
+            }
+            
+            function fetchLocationData(location) {
+                fetch(`/get_location_data/${location}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showNotification('Error loading location data', 'error');
+                        return;
+                    }
+                    
+                    // Update chart with adjusted stock values for Mumbai
+                    const values = location === 'Mumbai' ? 
+                        data.labels.map((_, i) => data.before_stock[i] + 100) : 
+                        data.before_stock;
+                    
+                    updateChart(data.labels, values);
+                })
+                .catch(error => {
+                    showNotification('Error loading location data', 'error');
+                });
+            }
+            
+            function initializeChart(labels, values) {
+                const ctx = document.getElementById('stockChart').getContext('2d');
+                stockChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Current Stock',
+                            data: values,
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1,
+                            borderRadius: 6,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: '#1F2937',
+                                titleFont: {
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                bodyFont: {
+                                    size: 12
+                                },
+                                padding: 12,
+                                cornerRadius: 8
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    drawBorder: false,
+                                    color: '#E5E7EB'
+                                },
+                                ticks: {
+                                    color: '#6B7280'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false,
+                                    drawBorder: false
+                                },
+                                ticks: {
+                                    color: '#6B7280',
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            function updateChart(labels, values) {
+                stockChart.data.labels = labels;
+                stockChart.data.datasets[0].data = values;
+                stockChart.update();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Welcome {{ username }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .sidebar {
+            transition: all 0.3s;
+        }
+        .active-menu {
+            background-color: #3B82F6;
+            color: white;
+        }
+        .card {
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Inventory card specific styles */
+        .inventory-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+        .progress-bar {
+            height: 6px;
+            border-radius: 3px;
+            background-color: #f0f0f0;
+        }
+        .progress-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+        .status-badge {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="sidebar bg-white w-64 px-4 py-8 shadow-lg">
+            <div class="flex items-center space-x-3 px-4 mb-10">
+                <i class="fas fa-warehouse text-blue-500 text-2xl"></i>
+                <h1 class="text-xl font-bold text-gray-800">Inventory System</h1>
+            </div>
+            
+            <nav>
+                <a href="templates/inventory_popup.html"/inventory_popup.html" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 mb-2 text-gray-700">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/logout" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 mt-8">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-y-auto p-8">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-800">Inventory Dashboard</h2>
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-600">Welcome, <strong>{{ username }}</strong></span>
+                    <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white cursor-pointer hover:bg-blue-600 transition" 
+                         id="profile-icon">
+                        {{ username[0]|upper }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <!-- Inventory Tracking Card -->
+                <div class="card inventory-card bg-white p-6 rounded-lg shadow" id="inventory-card">
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm font-medium">INVENTORY TRACKING</p>
+                            <div class="flex items-center mt-2">
+                                <h3 class="text-2xl font-bold mr-2" id="inventory-count">Loading...</h3>
+                                <span class="status-badge bg-blue-100 text-blue-600" id="inventory-status">Updating</span>
+                            </div>
+                            <div class="flex items-center mt-3">
+                                <div class="progress-bar flex-1 mr-2">
+                                    <div class="progress-fill bg-blue-500" id="inventory-progress" style="width: 0%"></div>
+                                </div>
+                                <span class="text-xs text-gray-500" id="progress-text">0% complete</span>
+                            </div>
+                        </div>
+                        <i class="fas fa-boxes text-blue-500 text-3xl"></i>
+                    </div>
+                </div>
+
+                <!-- Demand Forecasting Card -->
+                <div class="card inventory-card bg-white p-6 rounded-lg shadow" id="demand-card">
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm font-medium">DEMAND FORECASTING</p>
+                            <div class="flex items-center mt-2">
+                                <h3 class="text-2xl font-bold mr-2" id="demand-accuracy">Loading...</h3>
+                                <span class="status-badge bg-green-100 text-green-600" id="demand-status">Analyzing</span>
+                            </div>
+                            <div class="flex items-center mt-3">
+                                <div class="progress-bar flex-1 mr-2">
+                                    <div class="progress-fill bg-green-500" id="demand-progress" style="width: 0%"></div>
+                                </div>
+                                <span class="text-xs text-gray-500" id="demand-progress-text">0% complete</span>
+                            </div>
+                        </div>
+                        <i class="fas fa-brain text-green-500 text-3xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-semibold mb-4">Inventory Actions</h3>
+                <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+                    <button class="bg-blue-50 text-blue-600 p-4 rounded-lg hover:bg-blue-100 transition flex flex-col items-center"
+                            onclick="window.location.href='/hello.html'">
+                        <i class="fas fa-box-open text-xl mb-2"></i>
+                        <span>Add Item</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inventory card functionality
+            const inventoryCard = document.getElementById('inventory-card');
+            const countElement = document.getElementById('inventory-count');
+            const statusElement = document.getElementById('inventory-status');
+            const progressElement = document.getElementById('inventory-progress');
+            const progressText = document.getElementById('progress-text');
+            
+            // Demand card functionality
+            const demandCard = document.getElementById('demand-card');
+            const demandAccuracy = document.getElementById('demand-accuracy');
+            const demandStatus = document.getElementById('demand-status');
+            const demandProgress = document.getElementById('demand-progress');
+            const demandProgressText = document.getElementById('demand-progress-text');
+            
+            // Simulate API call for inventory
+            setTimeout(() => {
+                // Mock data for inventory
+                const totalItems = 1243;
+                const lowStockItems = 217;
+                const lowStockPercentage = Math.round((lowStockItems / totalItems) * 100);
+                const healthyPercentage = 100 - lowStockPercentage;
+                
+                countElement.textContent = totalItems.toLocaleString();
+                statusElement.textContent = 'Healthy';
+                statusElement.classList.remove('bg-blue-100', 'text-blue-600');
+                statusElement.classList.add('bg-green-100', 'text-green-600');
+                progressElement.style.width = `${healthyPercentage}%`;
+                progressElement.classList.add('bg-green-500');
+                progressText.textContent = `${healthyPercentage}% healthy`;
+                
+                // Enable click after load
+                inventoryCard.addEventListener('click', function() {
+                    window.location.href = '/inventory_1';
+                });
+            }, 1500);
+            
+            // Simulate API call for demand forecasting
+            setTimeout(() => {
+                // Mock data for demand forecasting
+                const accuracy = 87;
+                const completeness = 92;
+                
+                demandAccuracy.textContent = `${accuracy}%`;
+                demandStatus.textContent = 'Accurate';
+                demandStatus.classList.remove('bg-green-100', 'text-green-600');
+                demandStatus.classList.add('bg-blue-100', 'text-blue-600');
+                demandProgress.style.width = `${completeness}%`;
+                demandProgressText.textContent = `${completeness}% complete`;
+                
+                // Enable click after load
+                demandCard.addEventListener('click', function() {
+                    window.location.href ='/demand_forecast1';
+                });
+            }, 2000);
+            
+            // Profile dropdown toggle
+            document.getElementById('profile-icon').addEventListener('click', function(e) {
+                e.stopPropagation();
+                const dropdown = document.createElement('div');
+                dropdown.className = 'absolute right-8 top-20 bg-white shadow-lg rounded-md p-2 z-10';
+                dropdown.innerHTML = `
+                    <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Your Profile</a>
+                    <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
+                    <a href="/logout" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign out</a>
+                `;
+                document.body.appendChild(dropdown);
+                
+                // Close when clicking elsewhere
+                const closeDropdown = () => {
+                    document.body.removeChild(dropdown);
+                    document.removeEventListener('click', closeDropdown);
+                };
+                document.addEventListener('click', closeDropdown);
+            });
+        });
+    </script>
+</body>
+</html>

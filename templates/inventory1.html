@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Overview</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            height: 400px;
+        }
+        .chart-wrapper {
+            position: relative;
+            height: 350px;
+            width: 100%;
+        }
+        .location-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .location-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .active-location {
+            border-left: 4px solid #3B82F6;
+            background-color: #EFF6FF;
+        }
+        .status-badge {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        .negative-value {
+            color: #EF4444;
+        }
+        .positive-value {
+            color: #10B981;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="sidebar bg-white w-64 px-4 py-8 shadow-lg">
+            <div class="flex items-center space-x-3 px-4 mb-10">
+                <i class="fas fa-warehouse text-blue-500 text-2xl"></i>
+                <h1 class="text-xl font-bold text-gray-800">Inventory System</h1>
+            </div>
+            
+            <nav>
+                <a href="/dashboard" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 mb-2 text-gray-700">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/inventory_1" class="flex items-center space-x-3 px-4 py-3 rounded-lg bg-blue-50 mb-2 text-blue-600">
+                    <i class="fas fa-boxes"></i>
+                    <span>Inventory</span>
+                </a>
+                <a href="/demand_forecast1" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 mb-2 text-gray-700">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="/pending_orders1" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Pending Orders</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-y-auto p-8">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-800">Inventory Overview</h2>
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-600">Welcome, <strong>{{ username }}</strong></span>
+                    <a href="/logout" class="text-blue-500 hover:text-blue-700">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </div>
+            </div>
+
+            <!-- Location Selector -->
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
+                {% for location in locations %}
+                <div class="location-card bg-white p-4 rounded-lg shadow border border-gray-200 flex items-center justify-between"
+                     onclick="loadLocationData('{{ location }}')">
+                    <div>
+                        <h3 class="font-medium">{{ location }}</h3>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-400"></i>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Chart Section -->
+            <div class="grid grid-cols-1 gap-6 mb-8">
+                <div class="chart-container p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold" id="chart-title">Stock Analysis - Select a location</h3>
+                        <div class="flex space-x-2">
+                            <button id="toggleChartBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm">
+                                Show Net Difference Only
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="inventoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Table -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-semibold">Detailed Inventory Data</h3>
+                        <div class="flex space-x-3">
+                            <div class="relative">
+                                <input type="text" id="searchInput" placeholder="Search products..." class="border border-gray-300 rounded-md px-4 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500 w-64">
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Type</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Available Stock</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer Orders</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Net Difference</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="inventory-table-body">
+                            {% for item in inventory_data %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item[0] }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item[4] }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item[1] }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item[2] }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm {% if item[3] < 0 %}negative-value{% else %}positive-value{% endif %}">
+                                    {{ item[3] }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if item[3] < 0 %}
+                                        <span class="status-badge bg-red-100 text-red-800">Shortage</span>
+                                    {% else %}
+                                        <span class="status-badge bg-green-100 text-green-800">Adequate</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let inventoryChart = null;
+        let chartType = 'grouped'; // Default chart type
+        
+        // Function to load data for a specific location
+        async function loadLocationData(location) {
+            try {
+                // Update active location card
+                document.querySelectorAll('.location-card').forEach(card => {
+                    card.classList.remove('active-location');
+                    if (card.querySelector('h3').textContent === location) {
+                        card.classList.add('active-location');
+                    }
+                });
+                
+                // Fetch data from server
+                const response = await fetch(`/get_location_data/${location}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error(data.error);
+                    return;
+                }
+                
+                // Update chart title
+                document.getElementById('chart-title').textContent = `Stock Analysis - ${location}`;
+                
+                // Update or create chart
+                const ctx = document.getElementById('inventoryChart').getContext('2d');
+                
+                if (inventoryChart) {
+                    inventoryChart.destroy(); // Destroy existing chart before creating new one
+                }
+                
+                if (chartType === 'grouped') {
+                    createGroupedBarChart(ctx, data, location);
+                } else {
+                    createDifferenceChart(ctx, data, location);
+                }
+                
+                // Filter table data (client-side)
+                filterTableData(location);
+                
+            } catch (error) {
+                console.error('Error loading location data:', error);
+            }
+        }
+        
+        function filterTableData(location) {
+            const tableBody = document.getElementById('inventory-table-body');
+            const rows = tableBody.querySelectorAll('tr');
+            
+            rows.forEach(row => {
+                const locationCell = row.querySelector('td:nth-child(2)');
+                if (locationCell && locationCell.textContent === location) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        function createGroupedBarChart(ctx, data, location) {
+            inventoryChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        {
+                            label: 'Available Stock',
+                            data: data.before_stock,
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                        },
+                        {
+                            label: 'Customer Orders',
+                            data: data.customer_order,
+                            backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                        },
+                        {
+                            label: 'Net Difference',
+                            data: data.net_difference,
+                            backgroundColor: function(context) {
+                                const value = context.raw;
+                                return value < 0 
+                                    ? 'rgba(220, 38, 38, 0.7)' // Red for negative
+                                    : 'rgba(16, 185, 129, 0.7)'; // Green for positive
+                            },
+                            borderColor: function(context) {
+                                const value = context.raw;
+                                return value < 0 
+                                    ? 'rgba(220, 38, 38, 1)' 
+                                    : 'rgba(16, 185, 129, 1)';
+                            },
+                            borderWidth: 1,
+                            borderRadius: 4,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterBody: function(context) {
+                                    const datasetIndex = context[0].datasetIndex;
+                                    const dataIndex = context[0].dataIndex;
+                                    const stock = data.before_stock[dataIndex];
+                                    const orders = data.customer_order[dataIndex];
+                                    const difference = data.net_difference[dataIndex];
+                                    
+                                    if (datasetIndex === 0) {
+                                        return [
+                                            `Customer Orders: ${orders}`,
+                                            `Net Difference: ${difference}`
+                                        ];
+                                    } else if (datasetIndex === 1) {
+                                        return [
+                                            `Available Stock: ${stock}`,
+                                            `Net Difference: ${difference}`
+                                        ];
+                                    } else {
+                                        return [
+                                            `Available Stock: ${stock}`,
+                                            `Customer Orders: ${orders}`
+                                        ];
+                                    }
+                                }
+                            },
+                            backgroundColor: '#1F2937',
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 12
+                            },
+                            padding: 12,
+                            cornerRadius: 8
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: false,
+                            grid: {
+                                drawBorder: false,
+                                color: '#E5E7EB'
+                            },
+                            ticks: {
+                                color: '#6B7280'
+                            }
+                        },
+                        y: {
+                            stacked: false,
+                            beginAtZero: false, // Allow negative values
+                            grid: {
+                                drawBorder: false,
+                                color: '#E5E7EB'
+                            },
+                            ticks: {
+                                color: '#6B7280',
+                                callback: function(value) {
+                                    return value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createDifferenceChart(ctx, data, location) {
+            inventoryChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        {
+                            label: 'Net Difference (Stock - Orders)',
+                            data: data.net_difference,
+                            backgroundColor: function(context) {
+                                const value = context.raw;
+                                return value < 0 
+                                    ? 'rgba(220, 38, 38, 0.7)' // Red for negative
+                                    : 'rgba(16, 185, 129, 0.7)'; // Green for positive
+                            },
+                            borderColor: function(context) {
+                                const value = context.raw;
+                                return value < 0 
+                                    ? 'rgba(220, 38, 38, 1)' 
+                                    : 'rgba(16, 185, 129, 1)';
+                            },
+                            borderWidth: 1,
+                            borderRadius: 4,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterBody: function(context) {
+                                    const dataIndex = context[0].dataIndex;
+                                    const stock = data.before_stock[dataIndex];
+                                    const orders = data.customer_order[dataIndex];
+                                    const difference = data.net_difference[dataIndex];
+                                    
+                                    return [
+                                        `Available Stock: ${stock}`,
+                                        `Customer Orders: ${orders}`,
+                                        `Net Difference: ${difference}`
+                                    ];
+                                }
+                            },
+                            backgroundColor: '#1F2937',
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 12
+                            },
+                            padding: 12,
+                            cornerRadius: 8
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                drawBorder: false,
+                                color: '#E5E7EB'
+                            },
+                            ticks: {
+                                color: '#6B7280'
+                            }
+                        },
+                        y: {
+                            beginAtZero: false, // Allow negative values
+                            grid: {
+                                drawBorder: false,
+                                color: '#E5E7EB'
+                            },
+                            ticks: {
+                                color: '#6B7280',
+                                callback: function(value) {
+                                    return value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Toggle between chart types
+        document.getElementById('toggleChartBtn').addEventListener('click', function() {
+            if (!inventoryChart) return;
+            
+            const ctx = document.getElementById('inventoryChart').getContext('2d');
+            const currentLocation = document.querySelector('.active-location h3').textContent;
+            
+            // Toggle chart type
+            if (chartType === 'grouped') {
+                chartType = 'difference';
+                this.textContent = 'Show Grouped View';
+            } else {
+                chartType = 'grouped';
+                this.textContent = 'Show Net Difference Only';
+            }
+            
+            // Reload data with new chart type
+            loadLocationData(currentLocation);
+        });
+        
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#inventory-table-body tr');
+            
+            rows.forEach(row => {
+                if (row.style.display === 'none') return;
+                
+                const productType = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
+                if (productType.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+        
+        // Load first location by default
+        document.addEventListener('DOMContentLoaded', () => {
+            const firstLocation = document.querySelector('.location-card h3');
+            if (firstLocation) {
+                loadLocationData(firstLocation.textContent);
+            }
+        });
+    </script>
+</body>
+</html>
